@@ -1,13 +1,13 @@
-package labs.pm.app.data;
+package labs.pm.data;
 
 import static java.math.RoundingMode.HALF_UP;
-import static labs.pm.app.data.Rating.*;
+import static labs.pm.data.Rating.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 
-public abstract class Product {
+public abstract class Product implements Rateable<Product> {
 
 	public static final BigDecimal DISCOUNT_RATE = BigDecimal.valueOf(0.1);
 	private final int id; // immutable class
@@ -15,19 +15,19 @@ public abstract class Product {
 	private final BigDecimal price;
 	private final Rating rating;
 
-	 Product(int id, String name, BigDecimal price, Rating rating) {
+	Product(int id, String name, BigDecimal price, Rating rating) {
 		this.id = id;
 		this.name = name;
 		this.price = price;
 		this.rating = rating;
 	}
 
-	 Product(int id, String name, BigDecimal price) {
+	Product(int id, String name, BigDecimal price) {
 		this(id, name, price, NOT_RATED);
 	}
 
-	//  Product() {
-	// 	this(0, "no name", BigDecimal.ZERO);
+	// Product() {
+	// this(0, "no name", BigDecimal.ZERO);
 	// }
 
 	public int getId() {
@@ -54,23 +54,23 @@ public abstract class Product {
 	// this.price = price;
 	// }
 
+	@Override
 	public Rating getRating() {
 		return rating;
 	}
 
-	public abstract Product applyRating(Rating newRating);
-
 	public BigDecimal getDiscount() {
 		return price.multiply(DISCOUNT_RATE).setScale(2, HALF_UP);
 	}
-	
+
 	public LocalDate getBestBefore() {
 		return LocalDate.now();
 	}
 
 	@Override
 	public String toString() {
-		return "Product [id=" + id + ", name=" + name + ", price=" + price + ", rating=" + rating + ", bestBefore =" + getBestBefore() + "]";
+		return "Product [id=" + id + ", name=" + name + ", price=" + price + ", rating=" + rating + ", bestBefore ="
+				+ getBestBefore() + "]";
 	}
 
 	@Override
@@ -88,7 +88,5 @@ public abstract class Product {
 		return id == other.id && Objects.equals(name, other.name) && Objects.equals(price, other.price)
 				&& rating == other.rating;
 	}
-	
-	
 
 }

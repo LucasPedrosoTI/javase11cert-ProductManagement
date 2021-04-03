@@ -1,4 +1,4 @@
-package labs.pm.app.data;
+package labs.pm.data;
 
 public enum Rating {
 	NOT_RATED("\u2606\u2606\u2606\u2606\u2606"), ONE_STAR("\u2605\u2606\u2606\u2606\u2606"),

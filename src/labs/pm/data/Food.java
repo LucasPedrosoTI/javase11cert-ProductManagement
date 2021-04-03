@@ -1,4 +1,4 @@
-package labs.pm.app.data;
+package labs.pm.data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
