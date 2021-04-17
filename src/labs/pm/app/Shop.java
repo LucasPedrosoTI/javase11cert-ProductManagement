@@ -16,20 +16,23 @@ public class Shop {
 
 		ProductManager pm = new ProductManager("pt-BR");
 
-		pm.createProduct(101, "Tea", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
+		//		pm.createProduct(101, "Tea", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
+		pm.parseProduct("G,101,Tea,1.99,0,2021-13-10");
 		pm.printProductReport(101);
-		pm.reviewProduct(101, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.reviewProduct(101, Rating.TWO_STARS, "Bad hot cup of tea");
-		pm.reviewProduct(101, Rating.ONE_STAR, "Cool hot cup of tea");
-		pm.reviewProduct(101, Rating.ONE_STAR, "Great hot cup of tea");
-		pm.reviewProduct(101, Rating.FIVE_STARS, "Excellent hot cup of tea");
-		pm.reviewProduct(101, Rating.THREE_STARS, "Average hot cup of tea");
+		//		pm.reviewProduct(101, Rating.FOUR_STARS, "Nice hot cup of tea");
+		//		pm.reviewProduct(101, Rating.TWO_STARS, "Bad hot cup of tea");
+		//		pm.reviewProduct(101, Rating.ONE_STAR, "Cool hot cup of tea");
+		//		pm.reviewProduct(101, Rating.ONE_STAR, "Great hot cup of tea");
+		//		pm.reviewProduct(101, Rating.FIVE_STARS, "Excellent hot cup of tea");
+		//		pm.reviewProduct(101, Rating.THREE_STARS, "Average hot cup of tea");
+		pm.parseReview("101,3,Nice tea");
 		pm.printProductReport(101);
 
 		pm.createProduct(103, "Coke", BigDecimal.valueOf(3.99), Rating.NOT_RATED);
-		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
-		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
-		// pm.printProductReport(103);
+		//		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
+		//		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
+		//		
+		//		pm.printProductReport(103);
 
 		pm.createProduct(102, "Coffee", BigDecimal.valueOf(2.99), Rating.NOT_RATED);
 		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
@@ -39,20 +42,20 @@ public class Shop {
 
 		pm.changeLocale("en-US");
 
-		try {
-			Product p1 = pm.findProduct(102);
-			Product p2 = pm.findProduct(104);
-			LOGGER.info(() -> "Found product: " + p1.toString());
-			LOGGER.info(() -> "Found product: " + p2.toString());
-		} catch (Exception e) {
-			LOGGER.severe("Product not found");
-			LOGGER.severe(e.getMessage());
-		}
+		//		try {
+		//			Product p1 = pm.findProduct(102);
+		//			Product p2 = pm.findProduct(104);
+		//			LOGGER.info(() -> "Found product: " + p1.toString());
+		//			LOGGER.info(() -> "Found product: " + p2.toString());
+		//		} catch (Exception e) {
+		//			LOGGER.severe("Product not found");
+		//			LOGGER.severe(e.getMessage());
+		//		}
 
 		// orderna por preco DESC
 		final Comparator<Product> priceSorterDesc = (Product p1, Product p2) -> p2.getPrice().compareTo(p1.getPrice());
 		final Predicate<Product> priceFilter = p -> p.getPrice().doubleValue() > 2;
-		pm.printProducts(priceFilter, priceSorterDesc);
+		//		pm.printProducts(priceFilter, priceSorterDesc);
 		// ORDENA POR NOME ASC e DESC
 		// pm.printProducts((var p1, var p2) ->
 		// p1.getName().compareToIgnoreCase(p2.getName()));
@@ -65,7 +68,7 @@ public class Shop {
 		// pm.printProducts(ratingSorterAsc.thenComparing(priceSorterDesc));
 		// pm.printProducts(ratingSorterAsc.thenComparing(priceSorterDesc).reversed());
 
-		pm.getDiscounts().forEach((rating, discount) -> LOGGER.info(rating + "\t" + discount));
+		//		pm.getDiscounts().forEach((rating, discount) -> LOGGER.info(rating + "\t" + discount));
 
 	}
 

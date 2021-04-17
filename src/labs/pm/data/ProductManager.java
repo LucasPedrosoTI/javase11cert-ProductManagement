@@ -1,10 +1,14 @@
 package labs.pm.data;
 
+import static labs.pm.app.Shop.LOGGER;
+
 import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
+import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,19 +20,26 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import labs.pm.app.Shop;
+import java.util.logging.Level;
+import java.util.stream.Collectors;;
 
 public class ProductManager {
 
-	private Map<Product, List<Review>> products = new HashMap<>();
-	private ResourceFormatter formatter;
+	private static final String CONFIG_RESOURCE = "labs.pm.data.config";
+	private static final String REVIEW_DATA_FORMAT = "review.data.format";
+	private static final String PRODUCT_DATA_FORMAT = "product.data.format";
 	private static final char NEW_LINE = '\n';
+
 	private static Map<String, ResourceFormatter> formatters = Map.of("en-GB", new ResourceFormatter(Locale.UK),
 			"en-US", new ResourceFormatter(Locale.US),
 			"pt-BR", new ResourceFormatter(new Locale("pt", "BR")),
 			"es-EN", new ResourceFormatter(new Locale("es", "EN")));
+
+	private Map<Product, List<Review>> products = new HashMap<>();
+	private ResourceFormatter formatter;
+	private ResourceBundle config = ResourceBundle.getBundle(CONFIG_RESOURCE);
+	private MessageFormat reviewFormat = new MessageFormat(config.getString(REVIEW_DATA_FORMAT));
+	private MessageFormat productFormat = new MessageFormat(config.getString(PRODUCT_DATA_FORMAT));
 
 	public ProductManager(Locale locale) {
 		this(locale.toLanguageTag());
@@ -71,9 +82,9 @@ public class ProductManager {
 				.mapToInt(r -> r.getRating().ordinal())
 				.average()
 				.orElse(0));
-		//		for (Review review : reviews) {
-		//			sum += review.getRating().ordinal();
-		//		}
+		// for (Review review : reviews) {
+		// sum += review.getRating().ordinal();
+		// }
 		// boolean reviewed = false;
 		// while (i < reviews.length && !reviewed) {
 		// if (reviews[i] == null) {
@@ -85,7 +96,7 @@ public class ProductManager {
 		// }
 
 		// this.product = product.applyRating(rating);
-		//				Math.round((float) sum / reviews.size())
+		// Math.round((float) sum / reviews.size())
 		product = product.applyRating(Rateable.convert(average.intValue()));
 		products.put(product, reviews);
 		return product;
@@ -111,13 +122,12 @@ public class ProductManager {
 			// after the conversions
 		}
 
-
-		Shop.LOGGER.info(txt::toString);
+		LOGGER.info(txt::toString);
 	}
 
 	public void printProducts(Predicate<Product> filter, Comparator<Product> sorter) {
-		//		List<Product> productList = new ArrayList<>(products.keySet());
-		//		productList.sort(sorter);
+		// List<Product> productList = new ArrayList<>(products.keySet());
+		// productList.sort(sorter);
 		// for (Product product : productList) {
 		// txt.append(formatter.formatProduct(product)).append(NEW_LINE);
 		// }
@@ -130,12 +140,11 @@ public class ProductManager {
 				.map(p -> formatter.formatProduct(p) + NEW_LINE)
 				.collect(Collectors.joining()));
 
-
-		Shop.LOGGER.warning(txt::toString);
+		LOGGER.warning(txt::toString);
 
 	}
 
-	public Product findProduct(int id) {
+	public Product findProduct(int id) throws ProductManagerException {
 		// Iterator<Product> it = products.keySet().iterator();
 		// while (it.hasNext()) {
 		// Product product = it.next();
@@ -148,18 +157,29 @@ public class ProductManager {
 				.stream()
 				.filter(p -> p.getId() == id)
 				.findFirst()
-				.orElse(null);
-		// .orElseThrow();
+				.orElseThrow(() -> new ProductManagerException("Product with id " + id + " not found"));
+		//				.get();
+		//				.orElse(null);
 		// .collect(Collectors.toList())
 		// .get(0);
 	}
 
 	public void printProductReport(int id) {
-		this.printProductReport(this.findProduct(id));
+		try {
+			this.printProductReport(this.findProduct(id));
+		} catch (ProductManagerException e) {
+			LOGGER.info(e.getMessage());
+		}
 	}
 
 	public Product reviewProduct(int id, Rating rating, String comments) {
-		return reviewProduct(findProduct(id), rating, comments);
+		try {
+			return reviewProduct(findProduct(id), rating, comments);
+		} catch (Exception e) {
+			LOGGER.info(e.getMessage());
+		}
+
+		return null;
 	}
 
 	public Map<String, String> getDiscounts() {
@@ -172,6 +192,41 @@ public class ProductManager {
 										Collectors.summingDouble(
 												product -> product.getDiscount().doubleValue()),
 										discount -> formatter.moneyFormat.format(discount))));
+	}
+
+	public void parseReview(String text) {
+		try {
+			Object[] values = reviewFormat.parse(text);
+			reviewProduct(Integer.parseInt((String) values[0]), Rateable.convert(Integer.parseInt((String) values[1])),
+					(String) values[2]);
+		} catch (ParseException | NumberFormatException e) {
+			LOGGER.log(Level.WARNING, "Error parsing review {0}", text);
+		}
+	}
+
+	public void parseProduct(String text) {
+		try {
+			Object[] values = productFormat.parse(text);
+			int id = Integer.parseInt((String) values[1]);
+			String name = (String) values[2];
+			BigDecimal price = new BigDecimal((String) values[3]);
+			Rating rating = Rateable.convert(Integer.parseInt((String) values[4]));
+
+			switch ((String) values[0]) {
+			case "D":
+				createProduct(id, name, price, rating);
+				break;
+			case "F":
+				LocalDate bestBefore = LocalDate.parse((CharSequence) values[5]);
+				createProduct(id, name, price, rating, bestBefore);
+				break;
+			default:
+				throw new ParseException("Parsing Error", 0);
+			}
+
+		} catch (ParseException | NumberFormatException | DateTimeParseException e) {
+			LOGGER.log(Level.WARNING, "Error parsing review {0} - {1}", new Object[] { text, e.getMessage() });
+		}
 	}
 
 	private static class ResourceFormatter {
