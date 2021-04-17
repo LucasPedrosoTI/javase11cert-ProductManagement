@@ -1,9 +1,10 @@
 package labs.pm.app;
 
 import java.math.BigDecimal;
-import java.util.Locale;
+import java.util.Comparator;
 import java.util.logging.Logger;
 
+import labs.pm.data.Product;
 import labs.pm.data.ProductManager;
 import labs.pm.data.Rating;
 
@@ -11,50 +12,48 @@ public class Shop {
 	public static final Logger LOGGER = Logger.getGlobal();
 	public static void main(String[] args) {
 
-		// final Logger logger = Logger.getGlobal();
-		ProductManager pm = new ProductManager(Locale.getDefault());
+		ProductManager pm = new ProductManager("pt-BR");
 
 		pm.createProduct(101, "Tea", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
-		pm.printProductReport(101);
+		//		pm.printProductReport(101);
 		pm.reviewProduct(101, Rating.FOUR_STARS, "Nice hot cup of tea");
 		pm.reviewProduct(101, Rating.TWO_STARS, "Bad hot cup of tea");
 		pm.reviewProduct(101, Rating.ONE_STAR, "Cool hot cup of tea");
 		pm.reviewProduct(101, Rating.ONE_STAR, "Great hot cup of tea");
 		pm.reviewProduct(101, Rating.FIVE_STARS, "Excellent hot cup of tea");
 		pm.reviewProduct(101, Rating.THREE_STARS, "Average hot cup of tea");
-		pm.printProductReport(101);
+		//		pm.printProductReport(101);
 
-		pm.createProduct(102, "Coffee", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
+
+		pm.createProduct(103, "Coke", BigDecimal.valueOf(3.99), Rating.NOT_RATED);
+		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
+		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
+		// pm.printProductReport(103);
+
+		pm.createProduct(102, "Coffee", BigDecimal.valueOf(2.99), Rating.NOT_RATED);
 		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
 		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
 		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.printProductReport(102);
+		//		pm.printProductReport(102);
 
-		LOGGER.info(pm.findProduct(101).toString());
-		
-		pm.createProduct(103, "Coke", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
-		pm.reviewProduct(103, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.reviewProduct(103, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.reviewProduct(103, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.printProductReport(103);
-		// Product 102 = pm.createProduct(102, "Coffee", BigDecimal.valueOf(1.99), Rating.FOUR_STARS);
-		// Product p3 = pm.createProduct(103, "Cake", BigDecimal.valueOf(3.99), Rating.FIVE_STARS,
-		// 		LocalDate.now().plusDays(2));
-		// Product p4 = pm.createProduct(105, "Cookie", BigDecimal.valueOf(3.99), Rating.TWO_STARS, LocalDate.now());
-		// Product p5 = p3.applyRating(Rating.THREE_STARS);
+		pm.changeLocale("en-US");
+		//		LOGGER.info(pm.findProduct(101).toString());
 
-		// // p1.setId(101);
-		// // p1.setName("Tea");
-		// // p1.setPrice(BigDecimal.valueOf(1.99))
 
-		// LOGGER.info(p1.toString());
-		// System.out.println(102.getBestBefore());
-		// System.out.println(p3.getBestBefore());
-		// System.out.println(p1);
-		// System.out.println(102);
-		// System.out.println(p3);
-		// System.out.println(p4);
-		// System.out.println(p5);
+
+		// orderna por preco DESC
+		final Comparator<Product> priceSorterDesc = (Product p1, Product p2) -> p2.getPrice().compareTo(p1.getPrice());
+		pm.printProducts(priceSorterDesc);
+		// ORDENA POR NOME ASC e DESC
+		pm.printProducts((var p1, var p2) -> p1.getName().compareToIgnoreCase(p2.getName()));
+		pm.printProducts((p1, p2) -> p2.getName().compareToIgnoreCase(p1.getName()));
+		// ORDENA POR RATING ASC E DESC
+		final Comparator<Product> ratingSorterAsc = (p1, p2) -> p1.getRating().compareTo(p2.getRating());
+		pm.printProducts(ratingSorterAsc);
+		pm.printProducts((p1, p2) -> p2.getRating().compareTo(p1.getRating()));
+
+		pm.printProducts(ratingSorterAsc.thenComparing(priceSorterDesc));
+		pm.printProducts(ratingSorterAsc.thenComparing(priceSorterDesc).reversed());
 
 	}
 
