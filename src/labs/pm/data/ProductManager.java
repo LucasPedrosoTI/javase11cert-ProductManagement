@@ -10,12 +10,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import labs.pm.app.Shop;
 
@@ -24,11 +25,10 @@ public class ProductManager {
 	private Map<Product, List<Review>> products = new HashMap<>();
 	private ResourceFormatter formatter;
 	private static final char NEW_LINE = '\n';
-	private static Map<String, ResourceFormatter> formatters = 
-			Map.of("en-GB", new ResourceFormatter(Locale.UK), 
-					"en-US", new ResourceFormatter(Locale.US), 
-					"pt-BR", new ResourceFormatter(new Locale("pt", "BR")), 
-					"es-EN", new ResourceFormatter(new Locale("es", "EN")));
+	private static Map<String, ResourceFormatter> formatters = Map.of("en-GB", new ResourceFormatter(Locale.UK),
+			"en-US", new ResourceFormatter(Locale.US),
+			"pt-BR", new ResourceFormatter(new Locale("pt", "BR")),
+			"es-EN", new ResourceFormatter(new Locale("es", "EN")));
 
 	public ProductManager(Locale locale) {
 		this(locale.toLanguageTag());
@@ -66,10 +66,14 @@ public class ProductManager {
 		List<Review> reviews = products.get(product);
 		products.remove(product, reviews);
 		reviews.add(new Review(rating, comments));
-		int sum = 0;
-		for (Review review : reviews) {
-			sum += review.getRating().ordinal();
-		}
+		Long average = Math.round(reviews
+				.stream()
+				.mapToInt(r -> r.getRating().ordinal())
+				.average()
+				.orElse(0));
+		//		for (Review review : reviews) {
+		//			sum += review.getRating().ordinal();
+		//		}
 		// boolean reviewed = false;
 		// while (i < reviews.length && !reviewed) {
 		// if (reviews[i] == null) {
@@ -81,7 +85,8 @@ public class ProductManager {
 		// }
 
 		// this.product = product.applyRating(rating);
-		product = product.applyRating(Rateable.convert(Math.round((float) sum / reviews.size())));
+		//				Math.round((float) sum / reviews.size())
+		product = product.applyRating(Rateable.convert(average.intValue()));
 		products.put(product, reviews);
 		return product;
 	}
@@ -93,40 +98,60 @@ public class ProductManager {
 
 		txt.append(formatter.formatProduct(product)).append(NEW_LINE);
 
-		for (Review review : reviews) {
-			txt.append(formatter.formatReview(review)).append(NEW_LINE);
-		}
-
 		if (reviews.isEmpty()) {
 			txt.append(formatter.getText("no.reviews")).append(NEW_LINE);
+		} else {
+			// reviews.forEach(review ->
+			// txt.append(formatter.formatReview(review)).append(NEW_LINE)); // bad when
+			// using parallelism
+			txt.append(reviews
+					.stream()
+					.map(r -> formatter.formatReview(r) + NEW_LINE)
+					.collect(Collectors.joining())); // better for pararellism, because the joining is done altogether
+			// after the conversions
 		}
 
-		Shop.LOGGER.info(txt.toString());
+
+		Shop.LOGGER.info(txt::toString);
 	}
 
-	public void printProducts(Comparator<Product> sorter) {
-		List<Product> productList = new ArrayList<>(products.keySet());
-		productList.sort(sorter);
+	public void printProducts(Predicate<Product> filter, Comparator<Product> sorter) {
+		//		List<Product> productList = new ArrayList<>(products.keySet());
+		//		productList.sort(sorter);
+		// for (Product product : productList) {
+		// txt.append(formatter.formatProduct(product)).append(NEW_LINE);
+		// }
 
 		StringBuilder txt = new StringBuilder();
+		txt.append(products.keySet()
+				.stream()
+				.sorted(sorter)
+				.filter(filter)
+				.map(p -> formatter.formatProduct(p) + NEW_LINE)
+				.collect(Collectors.joining()));
 
-		for (Product product : productList) {
-			txt.append(formatter.formatProduct(product)).append(NEW_LINE);
-		}
 
-		Shop.LOGGER.warning(txt.toString());
+		Shop.LOGGER.warning(txt::toString);
 
 	}
 
 	public Product findProduct(int id) {
-		Iterator<Product> it = products.keySet().iterator();
-		while (it.hasNext()) {
-			Product product = it.next();
-			if (product.getId() == id) {
-				return product;
-			}
-		}
-		return null;
+		// Iterator<Product> it = products.keySet().iterator();
+		// while (it.hasNext()) {
+		// Product product = it.next();
+		// if (product.getId() == id) {
+		// return product;
+		// }
+		// }
+		// return null;
+		return products.keySet()
+				.stream()
+				.filter(p -> p.getId() == id)
+				.findFirst()
+				.orElse(null);
+		// .orElseThrow();
+		// .collect(Collectors.toList())
+		// .get(0);
 	}
 
 	public void printProductReport(int id) {
@@ -135,6 +160,18 @@ public class ProductManager {
 
 	public Product reviewProduct(int id, Rating rating, String comments) {
 		return reviewProduct(findProduct(id), rating, comments);
+	}
+
+	public Map<String, String> getDiscounts() {
+		return products.keySet()
+				.stream()
+				.collect(
+						Collectors.groupingBy(
+								p -> p.getRating().getStars(),
+								Collectors.collectingAndThen(
+										Collectors.summingDouble(
+												product -> product.getDiscount().doubleValue()),
+										discount -> formatter.moneyFormat.format(discount))));
 	}
 
 	private static class ResourceFormatter {
@@ -157,7 +194,8 @@ public class ProductManager {
 		}
 
 		private String formatReview(Review review) {
-			return MessageFormat.format(resources.getString("review"), review.getRating().getStars(), review.getComments());
+			return MessageFormat.format(resources.getString("review"), review.getRating().getStars(),
+					review.getComments());
 		}
 
 		private String getText(String key) {
