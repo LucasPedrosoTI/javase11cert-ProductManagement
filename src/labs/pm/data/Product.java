@@ -1,13 +1,14 @@
 package labs.pm.data;
 
 import static java.math.RoundingMode.HALF_UP;
-import static labs.pm.data.Rating.*;
+import static labs.pm.data.Rating.NOT_RATED;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 
-public abstract class Product implements Rateable<Product> {
+public abstract class Product implements Rateable<Product>, Serializable {
 
 	public static final BigDecimal DISCOUNT_RATE = BigDecimal.valueOf(0.1);
 	private final int id; // immutable class

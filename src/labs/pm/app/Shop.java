@@ -1,11 +1,8 @@
 package labs.pm.app;
 
 import java.math.BigDecimal;
-import java.util.Comparator;
-import java.util.function.Predicate;
 import java.util.logging.Logger;
 
-import labs.pm.data.Product;
 import labs.pm.data.ProductManager;
 import labs.pm.data.Rating;
 
@@ -16,31 +13,40 @@ public class Shop {
 
 		ProductManager pm = new ProductManager("pt-BR");
 
-		//		pm.createProduct(101, "Tea", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
-		pm.parseProduct("G,101,Tea,1.99,0,2021-13-10");
-		pm.printProductReport(101);
-		//		pm.reviewProduct(101, Rating.FOUR_STARS, "Nice hot cup of tea");
-		//		pm.reviewProduct(101, Rating.TWO_STARS, "Bad hot cup of tea");
-		//		pm.reviewProduct(101, Rating.ONE_STAR, "Cool hot cup of tea");
-		//		pm.reviewProduct(101, Rating.ONE_STAR, "Great hot cup of tea");
-		//		pm.reviewProduct(101, Rating.FIVE_STARS, "Excellent hot cup of tea");
-		//		pm.reviewProduct(101, Rating.THREE_STARS, "Average hot cup of tea");
-		pm.parseReview("101,3,Nice tea");
-		pm.printProductReport(101);
 
-		pm.createProduct(103, "Coke", BigDecimal.valueOf(3.99), Rating.NOT_RATED);
+		pm.createProduct(103, "Coke", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
+
+		pm.reviewProduct(103, Rating.FOUR_STARS, "Nice hot cup of tea");
+		pm.reviewProduct(103, Rating.TWO_STARS, "Bad hot cup of tea");
+		pm.reviewProduct(103, Rating.ONE_STAR, "Cool hot cup of tea");
+		pm.reviewProduct(103, Rating.ONE_STAR, "Great hot cup of tea");
+		pm.reviewProduct(103, Rating.FIVE_STARS, "Excellent hot cup of tea");
+		pm.reviewProduct(103, Rating.THREE_STARS, "Average hot cup of tea");
+
+		pm.dumpData();
+		pm.restoreData();
+
+		pm.printProductReport(101);
+		pm.printProductReport(102);
+		pm.printProductReport(103);
+
+		//		pm.parseProduct("D,101,Tea,1.99,0,2021-12-10");
+		//		pm.parseReview("101,3,Nice tea");
+		//		pm.printProductReport(101);
+
+		//		pm.createProduct(103, "Coke", BigDecimal.valueOf(3.99), Rating.NOT_RATED);
 		//		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
 		//		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
 		//		
 		//		pm.printProductReport(103);
 
-		pm.createProduct(102, "Coffee", BigDecimal.valueOf(2.99), Rating.NOT_RATED);
-		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
-		// pm.printProductReport(102);
+		//		pm.createProduct(102, "Coffee", BigDecimal.valueOf(2.99), Rating.NOT_RATED);
+		//		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
+		//		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
+		//		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
+		//		pm.printProductReport(102);
 
-		pm.changeLocale("en-US");
+		//		pm.changeLocale("en-US");
 
 		//		try {
 		//			Product p1 = pm.findProduct(102);
@@ -53,15 +59,15 @@ public class Shop {
 		//		}
 
 		// orderna por preco DESC
-		final Comparator<Product> priceSorterDesc = (Product p1, Product p2) -> p2.getPrice().compareTo(p1.getPrice());
-		final Predicate<Product> priceFilter = p -> p.getPrice().doubleValue() > 2;
+		//		final Comparator<Product> priceSorterDesc = (Product p1, Product p2) -> p2.getPrice().compareTo(p1.getPrice());
+		//		final Predicate<Product> priceFilter = p -> p.getPrice().doubleValue() > 2;
 		//		pm.printProducts(priceFilter, priceSorterDesc);
 		// ORDENA POR NOME ASC e DESC
 		// pm.printProducts((var p1, var p2) ->
 		// p1.getName().compareToIgnoreCase(p2.getName()));
 		// pm.printProducts((p1, p2) -> p2.getName().compareToIgnoreCase(p1.getName()));
 		// ORDENA POR RATING ASC E DESC
-		final Comparator<Product> ratingSorterAsc = (p1, p2) -> p1.getRating().compareTo(p2.getRating());
+		//		final Comparator<Product> ratingSorterAsc = (p1, p2) -> p1.getRating().compareTo(p2.getRating());
 		// pm.printProducts(ratingSorterAsc);
 		// pm.printProducts((p1, p2) -> p2.getRating().compareTo(p1.getRating()));
 
@@ -69,7 +75,6 @@ public class Shop {
 		// pm.printProducts(ratingSorterAsc.thenComparing(priceSorterDesc).reversed());
 
 		//		pm.getDiscounts().forEach((rating, discount) -> LOGGER.info(rating + "\t" + discount));
-
 	}
 
 }

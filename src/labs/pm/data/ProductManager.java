@@ -2,7 +2,16 @@ package labs.pm.data;
 
 import static labs.pm.app.Shop.LOGGER;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -17,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -25,10 +35,15 @@ import java.util.stream.Collectors;;
 
 public class ProductManager {
 
+	private static final String REVIEW_FILE = "reviews.data.file";
+	private static final String REPORT_FILE = "report.file";
+	private static final String TEMP_FOLDER = "temp.folder";
+	private static final String DATA_FOLDER = "data.folder";
+	private static final String REPORTS_FOLDER = "reports.folder";
 	private static final String CONFIG_RESOURCE = "labs.pm.data.config";
 	private static final String REVIEW_DATA_FORMAT = "review.data.format";
 	private static final String PRODUCT_DATA_FORMAT = "product.data.format";
-	private static final char NEW_LINE = '\n';
+	private static final String NEW_LINE = System.lineSeparator();
 
 	private static Map<String, ResourceFormatter> formatters = Map.of("en-GB", new ResourceFormatter(Locale.UK),
 			"en-US", new ResourceFormatter(Locale.US),
@@ -36,10 +51,18 @@ public class ProductManager {
 			"es-EN", new ResourceFormatter(new Locale("es", "EN")));
 
 	private Map<Product, List<Review>> products = new HashMap<>();
+
 	private ResourceFormatter formatter;
+
 	private ResourceBundle config = ResourceBundle.getBundle(CONFIG_RESOURCE);
+
 	private MessageFormat reviewFormat = new MessageFormat(config.getString(REVIEW_DATA_FORMAT));
 	private MessageFormat productFormat = new MessageFormat(config.getString(PRODUCT_DATA_FORMAT));
+
+	//	private Path currentFolder = Path.of(".");
+	private Path reportsFolder = Path.of(config.getString(REPORTS_FOLDER));
+	private Path dataFolder = Path.of(config.getString(DATA_FOLDER));
+	private Path tempFolder = Path.of(config.getString(TEMP_FOLDER));
 
 	public ProductManager(Locale locale) {
 		this(locale.toLanguageTag());
@@ -47,6 +70,7 @@ public class ProductManager {
 
 	public ProductManager(String languageTag) {
 		changeLocale(languageTag);
+		loadAllData();
 	}
 
 	public void changeLocale(String languageTag) {
@@ -102,27 +126,40 @@ public class ProductManager {
 		return product;
 	}
 
-	public void printProductReport(Product product) {
-		StringBuilder txt = new StringBuilder();
+	public void printProductReport(Product product) throws IOException {
+		//		StringBuilder txt = new StringBuilder();
 		List<Review> reviews = products.get(product);
 		Collections.sort(reviews);
 
-		txt.append(formatter.formatProduct(product)).append(NEW_LINE);
+		Path productFile = reportsFolder.resolve(MessageFormat.format(config.getString(REPORT_FILE), product.getId()));
 
-		if (reviews.isEmpty()) {
-			txt.append(formatter.getText("no.reviews")).append(NEW_LINE);
-		} else {
-			// reviews.forEach(review ->
-			// txt.append(formatter.formatReview(review)).append(NEW_LINE)); // bad when
-			// using parallelism
-			txt.append(reviews
-					.stream()
-					.map(r -> formatter.formatReview(r) + NEW_LINE)
-					.collect(Collectors.joining())); // better for pararellism, because the joining is done altogether
-			// after the conversions
+		//		LOGGER.info(">>>> normalize " + reportsFolder.normalize().toString());
+		//		LOGGER.info(">>>> absolute path " + reportsFolder.toAbsolutePath().toString());
+		//		LOGGER.info(">>>> uri " + reportsFolder.toUri().toString());
+		//		//		LOGGER.info(">>>> root " + reportsFolder.getRoot().toString());
+		//		LOGGER.info(">>>> parent " + reportsFolder.getParent().toString());
+		//		LOGGER.info(">>>>" + productFile.toString());
+
+		try (PrintWriter out = new PrintWriter(
+				new OutputStreamWriter(Files.newOutputStream(productFile, StandardOpenOption.CREATE),
+						StandardCharsets.UTF_8))) {
+
+			out.append(formatter.formatProduct(product)).append(NEW_LINE);
+			if (reviews.isEmpty()) {
+				out.append(formatter.getText("no.reviews")).append(NEW_LINE);
+			} else {
+				// reviews.forEach(review ->
+				// out.append(formatter.formatReview(review)).append(NEW_LINE)); // bad when
+				// using parallelism
+				out.append(reviews
+						.stream()
+						.map(r -> formatter.formatReview(r) + NEW_LINE)
+						.collect(Collectors.joining())); // better for pararellism, because the joining is done
+				// altogether
+				// after the conversions
+			}
 		}
-
-		LOGGER.info(txt::toString);
+		// LOGGER.info(txt::toString);
 	}
 
 	public void printProducts(Predicate<Product> filter, Comparator<Product> sorter) {
@@ -158,8 +195,8 @@ public class ProductManager {
 				.filter(p -> p.getId() == id)
 				.findFirst()
 				.orElseThrow(() -> new ProductManagerException("Product with id " + id + " not found"));
-		//				.get();
-		//				.orElse(null);
+		// .get();
+		// .orElse(null);
 		// .collect(Collectors.toList())
 		// .get(0);
 	}
@@ -169,6 +206,8 @@ public class ProductManager {
 			this.printProductReport(this.findProduct(id));
 		} catch (ProductManagerException e) {
 			LOGGER.info(e.getMessage());
+		} catch (IOException e) {
+			LOGGER.log(Level.SEVERE, "Error printing product report " + e.getMessage(), e);
 		}
 	}
 
@@ -194,17 +233,20 @@ public class ProductManager {
 										discount -> formatter.moneyFormat.format(discount))));
 	}
 
-	public void parseReview(String text) {
+	private Review parseReview(String text) {
+		Review review = null;
 		try {
 			Object[] values = reviewFormat.parse(text);
-			reviewProduct(Integer.parseInt((String) values[0]), Rateable.convert(Integer.parseInt((String) values[1])),
-					(String) values[2]);
+			review = new Review(Rateable.convert(Integer.parseInt((String) values[0])), (String) values[1]);
 		} catch (ParseException | NumberFormatException e) {
 			LOGGER.log(Level.WARNING, "Error parsing review {0}", text);
 		}
+
+		return review;
 	}
 
-	public void parseProduct(String text) {
+	private Product parseProduct(String text) {
+		Product product = null;
 		try {
 			Object[] values = productFormat.parse(text);
 			int id = Integer.parseInt((String) values[1]);
@@ -214,11 +256,11 @@ public class ProductManager {
 
 			switch ((String) values[0]) {
 			case "D":
-				createProduct(id, name, price, rating);
+				product = new Drink(id, name, price, rating);
 				break;
 			case "F":
 				LocalDate bestBefore = LocalDate.parse((CharSequence) values[5]);
-				createProduct(id, name, price, rating, bestBefore);
+				product = new Food(id, name, price, rating, bestBefore);
 				break;
 			default:
 				throw new ParseException("Parsing Error", 0);
@@ -226,6 +268,88 @@ public class ProductManager {
 
 		} catch (ParseException | NumberFormatException | DateTimeParseException e) {
 			LOGGER.log(Level.WARNING, "Error parsing review {0} - {1}", new Object[] { text, e.getMessage() });
+		}
+
+		return product;
+	}
+
+	private Product loadProduct(Path file) {
+		Product product = null;
+
+		try {
+			product = parseProduct(
+					Files.lines(file, StandardCharsets.UTF_8).findFirst().orElseThrow());
+		} catch (Exception e) {
+			LOGGER.warning(() -> "Error loading product " + e.getMessage());
+		}
+
+		return product;
+	}
+
+	private List<Review> loadReviews(Product product) {
+		List<Review> reviews = null;
+
+		Path file = dataFolder.resolve(MessageFormat.format(config.getString(REVIEW_FILE), product.getId()));
+
+		if (Files.notExists(file)) {
+			reviews = new ArrayList<>();
+		} else {
+			try {
+				reviews = Files.lines(file, StandardCharsets.UTF_8)
+						.map(text -> parseReview(text))
+						.filter(review -> review != null)
+						.collect(Collectors.toList());
+			} catch (IOException e) {
+				LOGGER.warning(() -> "Error parsing review for file " + file + e.getMessage());
+			}
+		}
+
+		return reviews;
+	}
+
+	private void loadAllData() {
+		try {
+			products = Files.list(dataFolder)
+					.filter(file -> file.getFileName().toString().startsWith("product"))
+					.map(this::loadProduct)
+					.filter(Objects::nonNull)
+					.collect(Collectors.toMap(product -> product, this::loadReviews));
+		} catch (IOException e) {
+			LOGGER.log(Level.SEVERE, "Error loading data " + e.getMessage(), e);
+		}
+	}
+
+	public void dumpData() {
+		try {
+			if (Files.notExists(tempFolder)) {
+				Files.createDirectories(tempFolder);
+			}
+
+			Path tempFile = tempFolder
+					.resolve(MessageFormat.format(config.getString("temp.file"), Math.round(Math.random() * 1000)));
+
+			try (ObjectOutputStream out = new ObjectOutputStream(
+					Files.newOutputStream(tempFile, StandardOpenOption.CREATE))) {
+				out.writeObject(products);
+				products = new HashMap<>();
+			}
+		} catch (IOException e) {
+			LOGGER.log(Level.SEVERE, "Error dumping data " + e.getMessage(), e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void restoreData() {
+		try {
+			Path tempFile = Files.list(tempFolder)
+					.filter(path -> path.getFileName().toString().endsWith("tmp"))
+					.findFirst().orElseThrow();
+			try (ObjectInputStream in = new ObjectInputStream(
+					Files.newInputStream(tempFile, StandardOpenOption.DELETE_ON_CLOSE))) {
+				products = (HashMap<Product, List<Review>>) in.readObject();
+			}
+		} catch (Exception e) {
+			LOGGER.log(Level.SEVERE, "Error restoring data " + e.getMessage(), e);
 		}
 	}
 
