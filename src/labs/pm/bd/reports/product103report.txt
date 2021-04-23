@@ -1,7 +1,0 @@
-Coke, Preço: R$ 1,99, Nota: ★★★☆☆, Validade: 21/04/2021
-Avaliação: ★★★★★	Excellent hot cup of tea
-Avaliação: ★★★★☆	Nice hot cup of tea
-Avaliação: ★★★☆☆	Average hot cup of tea
-Avaliação: ★★☆☆☆	Bad hot cup of tea
-Avaliação: ★☆☆☆☆	Cool hot cup of tea
-Avaliação: ★☆☆☆☆	Great hot cup of tea

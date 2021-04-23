@@ -1,0 +1,8 @@
+Tea, Price: $1.99, Rating: ★★★☆☆, Best before: 4/23/21
+Review: ★★★★★	Nice
+Review: ★★★★☆	Yet another review
+Review: ★★★★☆	Yet another review
+Review: ★★★★☆	Yet another review
+Review: ★★★★☆	Yet another review
+Review: ★★☆☆☆	bad
+Review: ★☆☆☆☆	horrible

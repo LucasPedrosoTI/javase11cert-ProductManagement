@@ -1,8 +1,18 @@
 package labs.pm.app;
 
-import java.math.BigDecimal;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import labs.pm.data.Product;
 import labs.pm.data.ProductManager;
 import labs.pm.data.Rating;
 
@@ -11,70 +21,58 @@ public class Shop {
 
 	public static void main(String[] args) {
 
-		ProductManager pm = new ProductManager("pt-BR");
+		ProductManager pm = ProductManager.getInstance();
+		AtomicInteger clientCount = new AtomicInteger(0);
 
+		Callable<String> client = () -> {
+			String clientId = "Client " + clientCount.incrementAndGet();
+			String threadName = Thread.currentThread().getName();
+			int productId = ThreadLocalRandom.current().nextInt(2) + 101;
+			String languageTag = ProductManager.getSupportedLocales()
+					.stream()
+					.skip(ThreadLocalRandom.current().nextInt(3))
+					.findFirst().get();
+			StringBuilder log = new StringBuilder();
 
-		pm.createProduct(103, "Coke", BigDecimal.valueOf(1.99), Rating.NOT_RATED);
+			log.append(clientId + threadName + "\n-\tstart of log\t-\n");
 
-		pm.reviewProduct(103, Rating.FOUR_STARS, "Nice hot cup of tea");
-		pm.reviewProduct(103, Rating.TWO_STARS, "Bad hot cup of tea");
-		pm.reviewProduct(103, Rating.ONE_STAR, "Cool hot cup of tea");
-		pm.reviewProduct(103, Rating.ONE_STAR, "Great hot cup of tea");
-		pm.reviewProduct(103, Rating.FIVE_STARS, "Excellent hot cup of tea");
-		pm.reviewProduct(103, Rating.THREE_STARS, "Average hot cup of tea");
+			log.append(pm.getDiscounts(languageTag).entrySet().stream()
+					.map(entry -> entry.getKey() + "\t" + entry.getValue()).collect(Collectors.joining("\n")));
 
-		pm.dumpData();
-		pm.restoreData();
+			Product product = pm.reviewProduct(productId, Rating.FOUR_STARS, "Yet another review");
 
-		pm.printProductReport(101);
-		pm.printProductReport(102);
-		pm.printProductReport(103);
+			log.append((product != null) ? "\nProduct: " + productId + " reviewed\n"
+					: "\nProduct " + productId + " not reviewed\n");
 
-		//		pm.parseProduct("D,101,Tea,1.99,0,2021-12-10");
-		//		pm.parseReview("101,3,Nice tea");
-		//		pm.printProductReport(101);
+			pm.printProductReport(productId, languageTag, clientId);
 
-		//		pm.createProduct(103, "Coke", BigDecimal.valueOf(3.99), Rating.NOT_RATED);
-		//		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
-		//		pm.reviewProduct(103, Rating.FIVE_STARS, "Nice hot cup of tea");
-		//		
-		//		pm.printProductReport(103);
+			log.append(clientId + " generated report for " + productId + " product");
 
-		//		pm.createProduct(102, "Coffee", BigDecimal.valueOf(2.99), Rating.NOT_RATED);
-		//		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
-		//		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
-		//		pm.reviewProduct(102, Rating.FOUR_STARS, "Nice hot cup of tea");
-		//		pm.printProductReport(102);
+			log.append("\n-\tend of the log\t-\n");
 
-		//		pm.changeLocale("en-US");
+			return log.toString();
+		};
 
-		//		try {
-		//			Product p1 = pm.findProduct(102);
-		//			Product p2 = pm.findProduct(104);
-		//			LOGGER.info(() -> "Found product: " + p1.toString());
-		//			LOGGER.info(() -> "Found product: " + p2.toString());
-		//		} catch (Exception e) {
-		//			LOGGER.severe("Product not found");
-		//			LOGGER.severe(e.getMessage());
-		//		}
+		List<Callable<String>> clients = Stream.generate(() -> client).limit(5).collect(Collectors.toList());
 
-		// orderna por preco DESC
-		//		final Comparator<Product> priceSorterDesc = (Product p1, Product p2) -> p2.getPrice().compareTo(p1.getPrice());
-		//		final Predicate<Product> priceFilter = p -> p.getPrice().doubleValue() > 2;
-		//		pm.printProducts(priceFilter, priceSorterDesc);
-		// ORDENA POR NOME ASC e DESC
-		// pm.printProducts((var p1, var p2) ->
-		// p1.getName().compareToIgnoreCase(p2.getName()));
-		// pm.printProducts((p1, p2) -> p2.getName().compareToIgnoreCase(p1.getName()));
-		// ORDENA POR RATING ASC E DESC
-		//		final Comparator<Product> ratingSorterAsc = (p1, p2) -> p1.getRating().compareTo(p2.getRating());
-		// pm.printProducts(ratingSorterAsc);
-		// pm.printProducts((p1, p2) -> p2.getRating().compareTo(p1.getRating()));
+		ExecutorService eService = Executors.newFixedThreadPool(3);
 
-		// pm.printProducts(ratingSorterAsc.thenComparing(priceSorterDesc));
-		// pm.printProducts(ratingSorterAsc.thenComparing(priceSorterDesc).reversed());
+		try {
+			List<Future<String>> results = eService.invokeAll(clients);
+			eService.shutdown();
 
-		//		pm.getDiscounts().forEach((rating, discount) -> LOGGER.info(rating + "\t" + discount));
+			results.stream().forEach(result -> {
+				try {
+					System.out.println(result.get());
+				} catch (InterruptedException | ExecutionException e) {
+					LOGGER.severe(() -> "Error retrieving client log " + e.getMessage());
+					Thread.currentThread().interrupt();
+				}
+			});
+		} catch (InterruptedException e) {
+			LOGGER.severe(() -> "Error invoking clients " + e.getMessage());
+			Thread.currentThread().interrupt();
+		}
 	}
 
 }
